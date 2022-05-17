@@ -1,0 +1,90 @@
+package day03.reference;
+
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+
+public class TestWeakReference {
+
+    public static void main(String[] args) {
+        MyWeakMap map = new MyWeakMap();
+        map.put(0, new String("a"), "1");
+        //map.put(0, new String("b"), "2");
+        map.put(1, "b", "2");
+        map.put(2, new String("c"), "3");
+        map.put(3, new String("d"), "4");
+        System.out.println(map);     //[a:1,b:2,c:3,d:4]
+
+        System.gc();
+        System.out.println(map.get("a"));  //null
+        System.out.println(map.get("b"));  //null     //[b,2]
+        System.out.println(map.get("c"));  //null
+        System.out.println(map.get("d"));  //null
+        System.out.println(map);   //[null:1,null:2,null:3,null:4]      //key被回收，但是value没有回收
+        
+        /* map.clean();
+        System.out.println(map); */
+    }
+
+    // 模拟 ThreadLocalMap 的内存泄漏问题以及一种解决方法
+    static class MyWeakMap {
+        //static ReferenceQueue<Object> queue = new ReferenceQueue<>();    //没有用到引用队列
+
+        static class Entry extends WeakReference<String> {
+            String value;
+
+            public Entry(String key, String value) {
+                super(key);
+                //super(key, queue);    //引用队列传进去
+                this.value = value;
+            }
+        }
+
+        //clean() 用来检查队列是否有值
+        /* public void clean() {
+            Object ref;
+            while ((ref = queue.poll()) != null) {
+                System.out.println(ref);
+                for (int i = 0; i < table.length; i++) {
+                    if(table[i] == ref) {
+                        table[i] = null;  //把与entry的强引用断开
+                    }
+                }
+            }
+        } */
+
+        Entry[] table = new Entry[4];
+
+        public void put(int index, String key, String value) {
+            table[index] = new Entry(key, value);
+        }
+
+        public String get(String key) {
+            for (Entry entry : table) {
+                if (entry != null) {
+                    String k = entry.get();
+                    if (k != null && k.equals(key)) {
+                        return entry.value;
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("[");
+            for (Entry entry : table) {
+                if (entry != null) {
+                    String k = entry.get();
+                    sb.append(k).append(":").append(entry.value).append(",");
+                }
+            }
+            if (sb.length() > 1) {
+                sb.deleteCharAt(sb.length() - 1);
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+    }
+}
